@@ -23,6 +23,7 @@ package com.ibm.narpc;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.StandardSocketOptions;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -43,6 +44,9 @@ public class NaRPCEndpoint<R extends NaRPCMessage, T extends NaRPCMessage> exten
 	public NaRPCEndpoint(NaRPCGroup group, SocketChannel channel) throws Exception {
 		this.group = group;
 		this.channel = channel;
+		this.channel.setOption(StandardSocketOptions.SO_RCVBUF, group.getQueueDepth()*group.getMessageSize());
+		this.channel.setOption(StandardSocketOptions.SO_SNDBUF, group.getQueueDepth()*group.getMessageSize());
+		this.channel.setOption(StandardSocketOptions.TCP_NODELAY, group.isNodelay());
 		this.pendingRPCs = new ConcurrentHashMap<Long, NaRPCFuture<R,T>>();
 		this.readLock = new ReentrantLock();
 		this.writeLock = new ReentrantLock();
@@ -86,9 +90,9 @@ public class NaRPCEndpoint<R extends NaRPCMessage, T extends NaRPCMessage> exten
 
 	public void connect(InetSocketAddress address) throws IOException {
 		this.channel.connect(address);
-		this.channel.socket().setTcpNoDelay(group.isNodelay());
-		this.channel.socket().setReuseAddress(true);
-		this.channel.configureBlocking(false);		
+		this.channel.configureBlocking(false);
+//		this.channel.socket().setTcpNoDelay(group.isNodelay());
+//		this.channel.socket().setReuseAddress(true);
 	}	
 	
 	public void close() throws IOException{

@@ -23,6 +23,7 @@ package com.ibm.narpc;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.StandardSocketOptions;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
@@ -33,10 +34,14 @@ public class NaRPCServerEndpoint<R extends NaRPCMessage, T extends NaRPCMessage>
 	public NaRPCServerEndpoint(NaRPCServerGroup<R,T> serverGroup) throws IOException{
 		this.serverGroup = serverGroup;
 		this.serverSocket = ServerSocketChannel.open();
+		this.serverSocket.setOption(StandardSocketOptions.SO_RCVBUF, serverGroup.getQueueDepth()*serverGroup.getMessageSize());
+		this.serverSocket.setOption(StandardSocketOptions.SO_REUSEADDR, true);
 	}
 	
 	public NaRPCServerChannel accept() throws Exception {
 		SocketChannel channel = serverSocket.accept();
+		//channel.setOption(StandardSocketOptions.SO_RCVBUF, serverGroup.getQueueDepth()*serverGroup.getMessageSize());
+		channel.setOption(StandardSocketOptions.SO_SNDBUF, serverGroup.getQueueDepth()*serverGroup.getMessageSize());
 		NaRPCServerChannel serverChannel = new NaRPCServerChannel(serverGroup, channel);
 		this.serverGroup.registerEndpoint(serverChannel);
 		return serverChannel;
@@ -47,7 +52,6 @@ public class NaRPCServerEndpoint<R extends NaRPCMessage, T extends NaRPCMessage>
 	}
 
 	public NaRPCServerEndpoint<R,T> bind(InetSocketAddress address) throws IOException {
-		serverSocket.socket().setReuseAddress(true);
 		serverSocket.bind(address);
 		return this;
 	}
